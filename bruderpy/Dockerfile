@@ -12,54 +12,55 @@ ENV OPENCV_VER 4.1.1
 ENV CC /usr/bin/clang
 ENV CXX /usr/bin/clang++
 
+
+# Copy install other python requirements from file
+COPY requirements.txt /tmp/
+
+# somehow squash is not working in build script
+# therefore merge all in one layer
 RUN apk add -U --no-cache --virtual=build-dependencies \
     linux-headers musl libxml2-dev libxslt-dev libffi-dev g++ \
     musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
     lcms2-dev openjpeg-dev make cmake clang clang-dev ninja \
     && apk add --no-cache gcc tesseract-ocr zlib jpeg libjpeg freetype openjpeg \
+    &&  CFLAGS="-g0 -Wl,--strip-all -I/usr/include:/usr/local/include -L/usr/lib:/usr/local/lib" \
+          pip install --no-cache-dir --compile --global-option=build_ext numpy \
     && curl $TESSDATA_EN -o /usr/share/tessdata/eng.traineddata \
     && curl $TESSDATA_DE -o /usr/share/tessdata/deu.traineddata \
-    && ln -s /usr/include/locale.h /usr/include/xlocale.h
-
-RUN cd /opt && \
+    && ln -s /usr/include/locale.h /usr/include/xlocale.h \
+    && cd /opt && \
     curl -L $OPENCV | tar zx && \
-    cd opencv-$OPENCV_VER
-
-RUN pip install --no-cache-dir numpy
-
-RUN  cd /opt/opencv-$OPENCV_VER && \
-     mkdir build && cd build && \
-    cmake -G Ninja \
-          -D CMAKE_BUILD_TYPE=RELEASE \
--D BUILD_opencv_flann=OFF \
--D BUILD_opencv_ml=OFF \
--D BUILD_opencv_gapi=OFF \
--D BUILD_opencv_objdetect=OFF \
--D BUILD_opencv_video=OFF \
--D BUILD_opencv_dnn=OFF \
--D BUILD_opencv_shape=OFF \
--D BUILD_opencv_videoio=OFF \
--D BUILD_opencv_highgui=OFF \
--D BUILD_opencv_superres=OFF \
--D BUILD_opencv_ts=OFF \
--D BUILD_opencv_features2d=OFF \
--D BUILD_opencv_calib3d=OFF \
--D BUILD_opencv_stitching=OFF \
--D BUILD_opencv_videostab=OFF \
-          -D CMAKE_INSTALL_PREFIX=/usr/local \
-          -D WITH_FFMPEG=NO \
-          -D WITH_IPP=NO \
-          -D PYTHON_EXECUTABLE=/usr/local/bin/python3 \
-          -D WITH_OPENEXR=NO .. && \
-    ninja && ninja install
-
-
-# Copy install other python requirements from file
-COPY requirements.txt /tmp/
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
-
-RUN apk del build-dependencies && \
-    rm -rf /var/cache/apk/*
+    cd opencv-$OPENCV_VER && \
+    mkdir build && cd build && \
+    CFLAGS="-g0 -Wl,--strip-all -I/usr/include:/usr/local/include -L/usr/lib:/usr/local/lib" \
+     cmake   -G Ninja \
+            -D CMAKE_BUILD_TYPE=RELEASE \
+            -D BUILD_opencv_flann=OFF \
+            -D BUILD_opencv_ml=OFF \
+            -D BUILD_opencv_gapi=OFF \
+            -D BUILD_opencv_objdetect=OFF \
+            -D BUILD_opencv_video=OFF \
+            -D BUILD_opencv_dnn=OFF \
+            -D BUILD_opencv_shape=OFF \
+            -D BUILD_opencv_videoio=OFF \
+            -D BUILD_opencv_highgui=OFF \
+            -D BUILD_opencv_superres=OFF \
+            -D BUILD_opencv_ts=OFF \
+            -D BUILD_opencv_features2d=OFF \
+            -D BUILD_opencv_calib3d=OFF \
+            -D BUILD_opencv_stitching=OFF \
+            -D BUILD_opencv_videostab=OFF \
+            -D CMAKE_INSTALL_PREFIX=/usr/local \
+            -D WITH_FFMPEG=NO \
+            -D WITH_IPP=NO \
+            -D PYTHON_EXECUTABLE=/usr/local/bin/python3 \
+            -D WITH_OPENEXR=NO .. && \
+    ninja && ninja install \
+    && CFLAGS="-g0 -Wl,--strip-all -I/usr/include:/usr/local/include -L/usr/lib:/usr/local/lib" \
+          pip install --no-cache-dir --compile --global-option=build_ext  -r /tmp/requirements.txt \
+    && apk del build-dependencies && \
+    rm -rf /var/cache/apk/* && \
+    rm -rf /opt/opencv-$OPENCV_VER
 
 # Copy root filesystem
 COPY rootfs /
