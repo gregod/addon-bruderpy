@@ -8,25 +8,31 @@ ENV TESSDATA_DE https://raw.githubusercontent.com/tesseract-ocr/tessdata/master/
 ENV OPENCV https://github.com/opencv/opencv/archive/4.1.1.tar.gz
 ENV OPENCV_VER 4.1.1
 
-# Copy install other python requirements from file
-COPY requirements.txt /tmp/
-
-# somehow squash is not working in build script
-# therefore merge all in one layer
+# first numpy and tesseract runtimes
 RUN apk add -U --no-cache --virtual=build-dependencies \
     linux-headers musl libxml2-dev libxslt-dev libffi-dev \
-    musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
-    lcms2-dev openjpeg-dev make cmake gcc ninja \
+    musl-dev libgcc build-base \
     && apk add --no-cache tesseract-ocr zlib jpeg libjpeg freetype openjpeg \
     && pip install --no-cache-dir numpy \
     && curl $TESSDATA_EN -o /usr/share/tessdata/eng.traineddata \
     && curl $TESSDATA_DE -o /usr/share/tessdata/deu.traineddata \
     && ln -s /usr/include/locale.h /usr/include/xlocale.h \
+    && apk del build-dependencies \
+    && rm -rf /var/cache/apk/*
+# then build opencv
+RUN apk add -U --no-cache --virtual=build-dependencies \
+    linux-headers musl libxml2-dev libxslt-dev libffi-dev \
+    musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
+    lcms2-dev openjpeg-dev make cmake gcc ninja \
+# add clang    
+    clang-dev clang \
     && cd /opt && \
     curl -L $OPENCV | tar zx && \
     cd opencv-$OPENCV_VER && \
     mkdir build && cd build && \
     cmake   -G Ninja \
+            -D CMAKE_C_COMPILER=/usr/bin/clang \
+            -D CMAKE_CXX_COMPILER=/usr/bin/clang++ \
             -D CMAKE_BUILD_TYPE=RELEASE \
             -D BUILD_DOCS=OFF \
             -D BUILD_EXAMPLES=OFF \
@@ -52,11 +58,20 @@ RUN apk add -U --no-cache --virtual=build-dependencies \
             -D WITH_IPP=NO \
             -D PYTHON_EXECUTABLE=/usr/local/bin/python3 \
             -D WITH_OPENEXR=NO .. && \
-    ninja && ninja install \
-    &&  pip install --no-cache-dir -r /tmp/requirements.txt \
+    ninja && ninja install && rm -rf /opt/opencv-$OPENCV_VER \
     && apk del build-dependencies && \
-    rm -rf /var/cache/apk/* && \
-    rm -rf /opt/opencv-$OPENCV_VER
+    rm -rf /var/cache/apk/*
+
+
+# then deal with python libraries
+COPY requirements.txt /tmp/
+RUN apk add -U --no-cache --virtual=build-dependencies \
+    linux-headers musl libxml2-dev libxslt-dev libffi-dev \
+    musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
+    lcms2-dev openjpeg-dev make cmake gcc ninja \
+    && pip install --no-cache-dir -r /tmp/requirements.txt \
+    && apk del build-dependencies && \
+    rm -rf /var/cache/apk/*
 
 # Copy root filesystem
 COPY rootfs /
