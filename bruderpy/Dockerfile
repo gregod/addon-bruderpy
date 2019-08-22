@@ -1,4 +1,4 @@
-ARG BUILD_FROM=homeassistant/base-python:3.0.1
+ARG BUILD_FROM=homeassistant/base:3.10
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
 
@@ -9,22 +9,17 @@ ENV OPENCV https://github.com/opencv/opencv/archive/4.1.1.tar.gz
 ENV OPENCV_VER 4.1.1
 
 # first numpy and tesseract runtimes
-RUN apk add -U --no-cache --virtual=build-dependencies \
-    linux-headers musl libxml2-dev libxslt-dev libffi-dev \
-    musl-dev libgcc build-base \
-    && apk add --no-cache tesseract-ocr zlib jpeg libjpeg freetype openjpeg \
-    && pip install --no-cache-dir numpy \
+RUN apk add -U --no-cache python3 py3-numpy tesseract-ocr zlib jpeg libjpeg freetype openjpeg \
     && curl $TESSDATA_EN -o /usr/share/tessdata/eng.traineddata \
     && curl $TESSDATA_DE -o /usr/share/tessdata/deu.traineddata \
     && ln -s /usr/include/locale.h /usr/include/xlocale.h \
-    && apk del build-dependencies \
     && rm -rf /var/cache/apk/*
+
 # then build opencv
-RUN apk add -U --no-cache --virtual=build-dependencies \
+RUN apk add -U --no-cache -X http://dl-4.alpinelinux.org/alpine/edge/community  --virtual=build-dependencies \
     linux-headers musl libxml2-dev libxslt-dev libffi-dev \
     musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
-    lcms2-dev openjpeg-dev make cmake gcc ninja \
-# add clang    
+    lcms2-dev openjpeg-dev python3-dev py3-numpy-dev make cmake gcc ninja \ 
     clang-dev clang \
     && cd /opt && \
     curl -L $OPENCV | tar zx && \
@@ -53,10 +48,11 @@ RUN apk add -U --no-cache --virtual=build-dependencies \
             -D BUILD_opencv_calib3d=OFF \
             -D BUILD_opencv_stitching=OFF \
             -D BUILD_opencv_videostab=OFF \
-            -D CMAKE_INSTALL_PREFIX=/usr/local \
+            -D CMAKE_INSTALL_PREFIX=/usr \
             -D WITH_FFMPEG=NO \
             -D WITH_IPP=NO \
-            -D PYTHON_EXECUTABLE=/usr/local/bin/python3 \
+            -D PYTHON_EXECUTABLE=/usr/bin/python3 \
+#            -D PYTHON_INCLUDE=/usr/include/python3.7m/ \
             -D WITH_OPENEXR=NO .. && \
     ninja && ninja install && rm -rf /opt/opencv-$OPENCV_VER \
     && apk del build-dependencies && \
@@ -68,8 +64,8 @@ COPY requirements.txt /tmp/
 RUN apk add -U --no-cache --virtual=build-dependencies \
     linux-headers musl libxml2-dev libxslt-dev libffi-dev \
     musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
-    lcms2-dev openjpeg-dev make cmake gcc ninja \
-    && pip install --no-cache-dir -r /tmp/requirements.txt \
+    lcms2-dev openjpeg-dev make cmake gcc ninja python3-dev \
+    && pip3 install --no-cache-dir -r /tmp/requirements.txt \
     && apk del build-dependencies && \
     rm -rf /var/cache/apk/*
 
@@ -77,7 +73,7 @@ RUN apk add -U --no-cache --virtual=build-dependencies \
 COPY rootfs /
 
 # Script to run after startup
-CMD ["/usr/bin/run.py"]
+CMD ["python3","/usr/bin/run.py"]
 
 # Build arguments
 ARG BUILD_ARCH
