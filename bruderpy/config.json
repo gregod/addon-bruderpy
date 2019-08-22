@@ -1,9 +1,9 @@
 {
-    "name": "Bruder Py",
+    "name": "BruderPy",
     "version": "0.1",
     "slug": "bruderpy",
     "description": "Submits token entered via usb hid to mqtt topic",
-    "url": "https://github.com/gregod/addon-usbhid-to-mqtt/tree/master/usbhid-to-mqtt",
+    "url": "https://github.com/gregod/addon-bruderpy/tree/master/bruderpy",
     "startup": "application",
     "arch": [
         "aarch64",
@@ -12,6 +12,7 @@
         "armv7",
         "i386"
     ],
+    "image": "gregod/{arch}-addon-bruderpy",
     "boot": "auto",
     "apparmor": false,
     "full_access": false,

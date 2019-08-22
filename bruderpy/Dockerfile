@@ -85,8 +85,8 @@ LABEL \
     org.label-schema.build-date=${BUILD_DATE} \
     org.label-schema.name="BruderPy" \
     org.label-schema.schema-version="1.0" \
-    org.label-schema.url="https://github.com/gregod/addon-usbhid-to-mqtt/tree/master/usbhid-to-mqtt" \
-    org.label-schema.usage="https://github.com/gregod/addon-usbhid-to-mqtt/blob/master/usbhid-to-mqtt/README.md" \
+    org.label-schema.url="https://github.com/gregod/addon-bruderpy/tree/master/bruderpy" \
+    org.label-schema.usage="https://github.com/gregod/addon-bruderpy/blob/master/bruderpy/README.md" \
     org.label-schema.vcs-ref=${BUILD_REF} \
-    org.label-schema.vcs-url="https://github.com/gregod/addon-usbhid-to-mqtt/" \
+    org.label-schema.vcs-url="https://github.com/gregod/addon-bruderpy/" \
     org.label-schema.vendor="Gregor Godbersen"
