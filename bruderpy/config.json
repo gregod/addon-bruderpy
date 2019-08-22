@@ -14,10 +14,6 @@
     "image": "gregod/{arch}-addon-bruderpy",
     "boot": "auto",
     "apparmor": false,
-    "full_access": false,
-    "hassio_role": "homeassistant",
-    "privileged": [ ],
-    
     "ports": {
         "8080/tcp": 8080
     },
