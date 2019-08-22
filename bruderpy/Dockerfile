@@ -3,15 +3,10 @@ ARG BUILD_FROM=homeassistant/base-python:3.0.1
 FROM ${BUILD_FROM}
 
 
-
-
 ENV TESSDATA_EN https://raw.githubusercontent.com/tesseract-ocr/tessdata/master/eng.traineddata
 ENV TESSDATA_DE https://raw.githubusercontent.com/tesseract-ocr/tessdata/master/deu.traineddata
 ENV OPENCV https://github.com/opencv/opencv/archive/4.1.1.tar.gz
 ENV OPENCV_VER 4.1.1
-ENV CC /usr/bin/clang
-ENV CXX /usr/bin/clang++
-
 
 # Copy install other python requirements from file
 COPY requirements.txt /tmp/
@@ -19,12 +14,11 @@ COPY requirements.txt /tmp/
 # somehow squash is not working in build script
 # therefore merge all in one layer
 RUN apk add -U --no-cache --virtual=build-dependencies \
-    linux-headers musl libxml2-dev libxslt-dev libffi-dev g++ \
+    linux-headers musl libxml2-dev libxslt-dev libffi-dev \
     musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
-    lcms2-dev openjpeg-dev make cmake clang clang-dev ninja \
-    && apk add --no-cache gcc tesseract-ocr zlib jpeg libjpeg freetype openjpeg \
-    &&  CFLAGS="-g0 -Wl,--strip-all -I/usr/include:/usr/local/include -L/usr/lib:/usr/local/lib" \
-          pip install --no-cache-dir --compile --global-option=build_ext numpy \
+    lcms2-dev openjpeg-dev make cmake gcc ninja \
+    && apk add --no-cache tesseract-ocr zlib jpeg libjpeg freetype openjpeg \
+    && pip install --no-cache-dir numpy \
     && curl $TESSDATA_EN -o /usr/share/tessdata/eng.traineddata \
     && curl $TESSDATA_DE -o /usr/share/tessdata/deu.traineddata \
     && ln -s /usr/include/locale.h /usr/include/xlocale.h \
@@ -32,9 +26,12 @@ RUN apk add -U --no-cache --virtual=build-dependencies \
     curl -L $OPENCV | tar zx && \
     cd opencv-$OPENCV_VER && \
     mkdir build && cd build && \
-    CFLAGS="-g0 -Wl,--strip-all -I/usr/include:/usr/local/include -L/usr/lib:/usr/local/lib" \
-     cmake   -G Ninja \
+    cmake   -G Ninja \
             -D CMAKE_BUILD_TYPE=RELEASE \
+            -D BUILD_DOCS=OFF \
+            -D BUILD_EXAMPLES=OFF \
+            -D BUILD_PERF_TESTS=OFF \
+            -D BUILD_TESTS=OFF \
             -D BUILD_opencv_flann=OFF \
             -D BUILD_opencv_ml=OFF \
             -D BUILD_opencv_gapi=OFF \
@@ -56,8 +53,7 @@ RUN apk add -U --no-cache --virtual=build-dependencies \
             -D PYTHON_EXECUTABLE=/usr/local/bin/python3 \
             -D WITH_OPENEXR=NO .. && \
     ninja && ninja install \
-    && CFLAGS="-g0 -Wl,--strip-all -I/usr/include:/usr/local/include -L/usr/lib:/usr/local/lib" \
-          pip install --no-cache-dir --compile --global-option=build_ext  -r /tmp/requirements.txt \
+    &&  pip install --no-cache-dir -r /tmp/requirements.txt \
     && apk del build-dependencies && \
     rm -rf /var/cache/apk/* && \
     rm -rf /opt/opencv-$OPENCV_VER
