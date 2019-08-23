@@ -437,6 +437,12 @@ def find_promising_dates(file_name):
 config = {}
 with open("/data/options.json", 'r') as f:
        config = json.load(f)
+
+if config["useShareFolder"] == True:
+    output_folder = "/share/bruderpy"
+else:
+    output_folder = "/data/scans"
+
 if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 
