@@ -8,24 +8,36 @@ ENV TESSDATA_DE https://raw.githubusercontent.com/tesseract-ocr/tessdata/master/
 ENV OPENCV https://github.com/opencv/opencv/archive/4.1.1.tar.gz
 ENV OPENCV_VER 4.1.1
 
+ENV PYTHON_VERSION 3.7.3
+ENV NUMPY_VERSION 1.17.0
+ENV TESSERACT_VERSION 4.0.0
+
+# install tagged edge repo
+RUN echo "@edge http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
+
 # first numpy and tesseract runtimes
-RUN apk add -U --no-cache python3 py3-numpy tesseract-ocr zlib jpeg libjpeg freetype openjpeg \
+RUN apk add -U --no-cache \
+    python3~=$PYTHON_VERSION \
+    py3-numpy@edge~=$NUMPY_VERSION \
+    tesseract-ocr~=$TESSERACT_VERSION \
+    zlib jpeg libjpeg freetype openjpeg \
     && curl $TESSDATA_EN -o /usr/share/tessdata/eng.traineddata \
     && curl $TESSDATA_DE -o /usr/share/tessdata/deu.traineddata \
-    && ln -s /usr/include/locale.h /usr/include/xlocale.h \
-    && rm -rf /var/cache/apk/*
+    && ln -s /usr/include/locale.h /usr/include/xlocale.h
 
 # then build opencv
-RUN apk add -U --no-cache -X http://dl-4.alpinelinux.org/alpine/edge/community  --virtual=build-dependencies \
+RUN apk add -U --virtual=build-dependencies  \
     linux-headers musl libxml2-dev libxslt-dev libffi-dev \
     musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
-    lcms2-dev openjpeg-dev python3-dev py3-numpy-dev make cmake gcc ninja \ 
+    lcms2-dev openjpeg-dev openblas-dev python3-dev~=$PYTHON_VERSION  make cmake gcc ninja \ 
     clang-dev clang \
-    && cd /opt && \
-    curl -L $OPENCV | tar zx && \
-    cd opencv-$OPENCV_VER && \
-    mkdir build && cd build && \
-    cmake   -G Ninja \
+    && apk add py3-numpy-dev@edge~=$NUMPY_VERSION \
+    && apk add openblas \
+    && cd /opt \
+    && curl -L $OPENCV | tar zx \
+    && cd opencv-$OPENCV_VER \
+    && mkdir build && cd build \
+    && cmake -G Ninja \
             -D CMAKE_C_COMPILER=/usr/bin/clang \
             -D CMAKE_CXX_COMPILER=/usr/bin/clang++ \
             -D CMAKE_BUILD_TYPE=RELEASE \
@@ -33,6 +45,7 @@ RUN apk add -U --no-cache -X http://dl-4.alpinelinux.org/alpine/edge/community  
             -D BUILD_EXAMPLES=OFF \
             -D BUILD_PERF_TESTS=OFF \
             -D BUILD_TESTS=OFF \
+            -D BUILD_PROTOBUF=OFF \
             -D BUILD_opencv_flann=OFF \
             -D BUILD_opencv_ml=OFF \
             -D BUILD_opencv_gapi=OFF \
@@ -50,24 +63,29 @@ RUN apk add -U --no-cache -X http://dl-4.alpinelinux.org/alpine/edge/community  
             -D BUILD_opencv_videostab=OFF \
             -D CMAKE_INSTALL_PREFIX=/usr \
             -D WITH_FFMPEG=NO \
+            -D WITH_ADE=OFF \
+            -D WITH_OPENCL=OFF \
+            -D WITH_V4L=OFF  \
+            -D WITH_LIBV4L=OFF \
+            -D WITH_FFMPEG=OFF \
             -D WITH_IPP=NO \
             -D PYTHON_EXECUTABLE=/usr/bin/python3 \
-#            -D PYTHON_INCLUDE=/usr/include/python3.7m/ \
-            -D WITH_OPENEXR=NO .. && \
-    ninja && ninja install && rm -rf /opt/opencv-$OPENCV_VER \
-    && apk del build-dependencies && \
-    rm -rf /var/cache/apk/*
+            -D WITH_OPENEXR=NO .. \
+    && ninja && ninja install && rm -rf /opt/opencv-$OPENCV_VER \
+    && apk del build-dependencies py3-numpy-dev \
+    && rm -rf /var/cache/apk/*
 
 
 # then deal with python libraries
 COPY requirements.txt /tmp/
-RUN apk add -U --no-cache --virtual=build-dependencies \
+RUN apk add -U --virtual=build-dependencies \
     linux-headers musl libxml2-dev libxslt-dev libffi-dev \
     musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
-    lcms2-dev openjpeg-dev make cmake gcc ninja python3-dev \
+    lcms2-dev openjpeg-dev make cmake gcc ninja \
+    && apk add python3-dev~=$PYTHON_VERSION \
     && pip3 install --no-cache-dir -r /tmp/requirements.txt \
-    && apk del build-dependencies && \
-    rm -rf /var/cache/apk/*
+    && apk del python3-dev build-dependencies \
+    && rm -rf /var/cache/apk/*
 
 # Copy root filesystem
 COPY rootfs /
