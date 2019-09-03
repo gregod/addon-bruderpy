@@ -9,18 +9,18 @@ ENV OPENCV https://github.com/opencv/opencv/archive/4.1.1.tar.gz
 ENV OPENCV_VER 4.1.1
 
 ENV PYTHON_VERSION 3.7.3
-ENV NUMPY_VERSION 1.17.0
+ENV NUMPY_VERSION 1.17
 ENV TESSERACT_VERSION 4.0.0
 
 # install tagged edge repo
 RUN echo "@edge http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
 
-# first numpy and tesseract runtimes
+# first numpy and tesseract runtimes + gnupg
 RUN apk add -U --no-cache \
     python3~=$PYTHON_VERSION \
     py3-numpy@edge~=$NUMPY_VERSION \
     tesseract-ocr~=$TESSERACT_VERSION \
-    zlib jpeg libjpeg freetype openjpeg \
+    zlib jpeg libjpeg freetype openjpeg gnupg\
     && curl $TESSDATA_EN -o /usr/share/tessdata/eng.traineddata \
     && curl $TESSDATA_DE -o /usr/share/tessdata/deu.traineddata \
     && ln -s /usr/include/locale.h /usr/include/xlocale.h
@@ -29,10 +29,9 @@ RUN apk add -U --no-cache \
 RUN apk add -U --virtual=build-dependencies  \
     linux-headers musl libxml2-dev libxslt-dev libffi-dev \
     musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
-    lcms2-dev openjpeg-dev openblas-dev python3-dev~=$PYTHON_VERSION  make cmake gcc ninja \ 
+    lcms2-dev openjpeg-dev openblas-dev  make cmake gcc ninja \ 
     clang-dev clang \
-    && apk add py3-numpy-dev@edge~=$NUMPY_VERSION \
-    && apk add openblas \
+    && apk add py3-numpy-dev@edge~=$NUMPY_VERSION python3-dev~=$PYTHON_VERSION openblas \
     && cd /opt \
     && curl -L $OPENCV | tar zx \
     && cd opencv-$OPENCV_VER \
@@ -72,11 +71,8 @@ RUN apk add -U --virtual=build-dependencies  \
             -D PYTHON_EXECUTABLE=/usr/bin/python3 \
             -D WITH_OPENEXR=NO .. \
     && ninja && ninja install && rm -rf /opt/opencv-$OPENCV_VER \
-    && apk del build-dependencies py3-numpy-dev \
+    && apk del build-dependencies py3-numpy-dev  python3-dev \
     && rm -rf /var/cache/apk/*
-
-# install gpg
-RUN apk add  --no-cache -U gnupg
 
 # then deal with python libraries
 COPY requirements.txt /tmp/
