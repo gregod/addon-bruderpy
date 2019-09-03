@@ -75,6 +75,8 @@ RUN apk add -U --virtual=build-dependencies  \
     && apk del build-dependencies py3-numpy-dev \
     && rm -rf /var/cache/apk/*
 
+# install gpg
+RUN apk add  --no-cache -U gnupg
 
 # then deal with python libraries
 COPY requirements.txt /tmp/

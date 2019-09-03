@@ -14,6 +14,8 @@ import numpy
 import xml.etree.ElementTree as ET
 import dateparser
 import json
+import subprocess
+from requests import post
 
 from thumbnailer import cropped_thumbnail
 
@@ -297,6 +299,11 @@ def worker():
             pass
 
         try:
+            # store scan date in file
+            scandate_file_path = os.path.join(work_item["folder_name"], "scandate")
+            with open(scandate_file_path, "w") as scandate_file:
+                scandate_file.write(datetime.today().strftime('%Y%m%d_%H%M_%S'))
+
             # store document labels in file
             if len(file_labels) > 0:
                 labels_file_path = os.path.join(work_item["folder_name"], "labels")
@@ -310,8 +317,61 @@ def worker():
             logging.error("Error setting labels, continuing")
             pass
 
-        logging.info("Finished processing document!")
+
+        try:
+            
+            basefolder_name = os.path.basename(os.path.normpath(work_item["folder_name"]))
+            encrypted_output_path = os.path.join(gpg_output_folder, "{}.tar.gpg".format(basefolder_name))
+            tar = subprocess.Popen(["tar","-cf","-","-C",work_item["folder_name"],"."],stdout=subprocess.PIPE)
+
+            
+            gpg = subprocess.Popen(["gpg","--encrypt", *sum([["-r",r] for r in gpg_keyids],[]) ,"--trust-model","always","-o",encrypted_output_path],stdin=tar.stdout)
+            gpg.communicate()
+            tar.communicate()
+
+            if tar.returncode != 0 or gpg.returncode != 0:
+                raise Exception
+            
+            # clean files if encryption was successfull
+            for name in os.listdir(work_item["folder_name"]):
+                if name != "scandate":
+                    os.remove(os.path.join(work_item["folder_name"], name))
+
+            # leave note about sucesss
+            didexport_file_path = os.path.join(work_item["folder_name"], "did_export_on")
+            with open(didexport_file_path, "w") as didexport_file:
+                didexport_file.write(datetime.today().strftime('%Y%m%d_%H%M_%S'))
+
+
+            
+            trigger_event("scancomplete",  {
+                "path" : encrypted_output_path,
+                "pages" : int(work_item["current_page"]) - 1,
+                "labels" : file_labels,
+            })
+
+        except:
+            logging.error("Could not export document")
+            trigger_event("scanerror",  {
+                "path" : encrypted_output_path,
+                "pages" : int(work_item["current_page"]) - 1,
+                "labels" : file_labels,
+            })
+
+        logging.info("Finished processing document! Stored in {}".format(encrypted_output_path))
         worker_queue.task_done()
+
+
+def trigger_event(event_type, payload):
+    try:
+        baseurl = "http://hassio/homeassistant/api/events/bruderpy_{}".format(event_type) 
+        headers = {
+            'Authorization': 'Bearer {}'.format(os.environ['HASSIO_TOKEN']),
+            'content-type': 'application/json',
+        }
+        post(baseurl, headers=headers,data = payload)
+    except:
+        logging.error("Could not trigger event")
 
 
 # start the local worker thread
@@ -456,13 +516,21 @@ config = {}
 with open("/data/options.json", 'r') as f:
        config = json.load(f)
 
-if config["useShareFolder"] == True:
-    output_folder = "/share/bruderpy"
-else:
-    output_folder = "/data/scans"
+gpg_output_folder = "/share/bruderpy"
+output_folder = "/data/scans"
+
+gpg_keyids = config["keyIds"]
+
+import_keys = subprocess.run(["gpg", "--recv-keys", *gpg_keyids])
+if import_keys.returncode != 0:
+    logging.error("Could not retrieve gpg keys from keyserver")
+    raise Exception
 
 if not os.path.exists(output_folder):
     os.mkdir(output_folder)
+
+if not os.path.exists(gpg_output_folder):
+    os.mkdir(gpg_output_folder)
 
 run_worker_loop()
 run_server(port = 8080)

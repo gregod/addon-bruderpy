@@ -1,6 +1,6 @@
 {
     "name": "BruderPy",
-    "version": "0.3",
+    "version": "0.4",
     "slug": "bruderpy",
     "description": "Receives images from network enabled document scanners via webdav and runs OCR on them",
     "url": "https://github.com/gregod/addon-bruderpy/tree/master/bruderpy",
@@ -9,6 +9,7 @@
         "amd64",
         "armhf"
     ],
+    "homeassistant_api" : true,
     "map" : ["share:rw"],
     "image": "gregod/{arch}-addon-bruderpy",
     "boot": "auto",
@@ -16,9 +17,9 @@
         "8080/tcp": 8080
     },
     "schema":  { 
-        "useShareFolder" : "bool"
-      },
+        "keyIds" : ["str"]
+    },
     "options" : {
-        "useShareFolder" : true
+        "keyIds" : []
     }
   }
