@@ -369,7 +369,7 @@ def trigger_event(event_type, payload):
             'Authorization': 'Bearer {}'.format(os.environ['HASSIO_TOKEN']),
             'content-type': 'application/json',
         }
-        post(baseurl, headers=headers,data = payload)
+        post(baseurl, headers = headers, json = payload)
     except:
         logging.error("Could not trigger event")
 
