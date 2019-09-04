@@ -1,6 +1,6 @@
 {
     "name": "BruderPy",
-    "version": "0.4",
+    "version": "0.5",
     "slug": "bruderpy",
     "description": "Receives images from network enabled document scanners via webdav and runs OCR on them",
     "url": "https://github.com/gregod/addon-bruderpy/tree/master/bruderpy",
