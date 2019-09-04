@@ -322,10 +322,9 @@ def worker():
             
             basefolder_name = os.path.basename(os.path.normpath(work_item["folder_name"]))
             encrypted_output_path = os.path.join(gpg_output_folder, "{}.tar.gpg".format(basefolder_name))
-            tar = subprocess.Popen(["tar","-cf","-","-C",work_item["folder_name"],"."],stdout=subprocess.PIPE)
 
-            
-            gpg = subprocess.Popen(["gpg","--encrypt", *sum([["-r",r] for r in gpg_keyids],[]) ,"--trust-model","always","-o",encrypted_output_path],stdin=tar.stdout)
+            tar = subprocess.Popen(["tar","-cf","-","-C",work_item["folder_name"],"."],stdout=subprocess.PIPE)
+            gpg = subprocess.Popen(["gpg",*default_gpg_params,"--encrypt", *sum([["-r",r] for r in gpg_keyids],[]) ,"--trust-model","always","-o",encrypted_output_path],stdin=tar.stdout)
             gpg.communicate()
             tar.communicate()
 
@@ -521,9 +520,21 @@ output_folder = "/data/scans"
 
 gpg_keyids = config["keyIds"]
 
-import_keys = subprocess.run(["gpg", "--recv-keys", *gpg_keyids])
+default_gpg_params = ["--homedir","/data/.gnupg","--batch"]
+
+import_keys = subprocess.run(["gpg",*default_gpg_params, "--recv-keys", *gpg_keyids])
 if import_keys.returncode != 0:
     logging.error("Could not retrieve gpg keys from keyserver")
+    raise Exception
+
+# test encrypt to make sure right keys were imported
+echo = subprocess.Popen(["echo","test"],stdout=subprocess.PIPE)
+gpg = subprocess.Popen(["gpg",*default_gpg_params,"--encrypt", *sum([["-r",r] for r in gpg_keyids],[]) ,"--trust-model","always"],stdin=echo.stdout, stdout=subprocess.DEVNULL)
+gpg.communicate()
+echo.communicate()
+
+if echo.returncode != 0 or gpg.returncode != 0:
+    logging.error("Could not encrypt test message")
     raise Exception
 
 if not os.path.exists(output_folder):
