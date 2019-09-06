@@ -86,10 +86,10 @@ RUN apk add -U --virtual=build-dependencies \
     && rm -rf /var/cache/apk/*
 
 # Copy root filesystem
-COPY rootfs /
+COPY src /opt/bruderpy
 
 # Script to run after startup
-CMD ["python3","/usr/bin/run.py"]
+CMD ["python3","/opt/bruderpy/run.py"]
 
 # Build arguments
 ARG BUILD_ARCH
