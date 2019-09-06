@@ -522,7 +522,7 @@ gpg_keyids = config["keyIds"]
 
 default_gpg_params = ["--homedir","/data/.gnupg","--batch"]
 
-import_keys = subprocess.run(["gpg",*default_gpg_params, "--recv-keys", *gpg_keyids])
+import_keys = subprocess.run(["gpg",*default_gpg_params,"--keyserver","hkps://keys.openpgp.org","--recv-keys", *gpg_keyids])
 if import_keys.returncode != 0:
     logging.error("Could not retrieve gpg keys from keyserver")
     raise Exception
