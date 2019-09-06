@@ -486,7 +486,8 @@ def find_promising_dates(file_name):
                 r'\d{4}-\d{2}-\d{2}',  # iso yyyy-mm-dd
                 r'\d{1,2}[ \.\-\/]\d{1,2}[ \.\-\/]((20\d{2})|\d{2}(\D|$))',  # mostly dd.mm.20yy
                 r'\d{1,2}[ \.]{1,2}\w{3,22}[ \.]{1,2}((20\d{2})|\d{2}(\D|$))',  # mostly dd written_month 20yy
-                r'\w{3,10}\.? \d{4}'  # lastly check written_month yyyy
+                r'\w{3,20} \d{1,2}[ ,.]{0,2}((20\d{2})|\d{2}(\D|$))', # mostly written month dd, 20yy
+                r'\w{3,10}\.? 20\d{2}'  # lastly check written_month 20yy
             ]
             for heuristic in simple_heuristics:
                 date_match = re.search(heuristic, text)
@@ -505,7 +506,8 @@ def find_promising_dates(file_name):
         merged_line = " ".join(words)
 
         date = parse(bbox, merged_line)
-        if date is not None:
+        # check if date was found, and if it is in the past but not too far
+        if date is not None and date < datetime.now() and date.year >= 1970:
             date_candidates.append(date)
 
     return date_candidates
