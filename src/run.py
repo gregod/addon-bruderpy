@@ -21,7 +21,6 @@ from thumbnailer import cropped_thumbnail
 
 logging.basicConfig(level=logging.INFO)
 
-output_folder = "/data/scans"
 tess_language = "deu"
 labels = {
     "_AUTO_DATED" : "rgb(252,175,62)",
@@ -29,12 +28,15 @@ labels = {
 }
 
 
+# Handler for the fake webdav server. 
+# Implements just enough mocked endpoints that scanner will talk to it
 class S(BaseHTTPRequestHandler):
     def _set_response(self):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
 
+    # is called by printer at start of every multi page document
     def do_PROPFIND(self):
         if str(self.path).endswith("/"):
             return_string = """<D:multistatus xmlns:D="DAV:" xmlns:Z="urn:schemas-microsoft-com:">
@@ -61,11 +63,13 @@ class S(BaseHTTPRequestHandler):
             start_new_scan()
 
         elif "/_TEST_FILE_" in str(self.path):
-            # test file from setup
+            # test file from setup, ignore it
             self.send_response(404)
             self.send_header('Content-type', 'text/xml')
             self.end_headers()
 
+    # scanner puts a 0 size document first, then locks it and only proceeds if the lock succeeds
+    # this fakes a successfull lock.
     def do_LOCK(self):
         global  scan_completed_timer
         return_string = """<?xml version="1.0" encoding="utf-8" ?>
@@ -102,19 +106,23 @@ class S(BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         # unlock is done after file is completed
-        # now wait for next page,
+        # wait for up to 3 seconds for the next page, otherwise finish the document
         scan_completed_timer = threading.Timer(3.0, finish_scan)
         scan_completed_timer.start()
 
     def do_DELETE(self):
         # only happens in test for setup
-        # or if something went wrong
+        # or if something went wrong, can be ignored.
         self.send_response(200)
         self.end_headers()
 
     def do_PUT(self):
         global current_scan
         logging.debug("Getting File...")
+
+        # this is a new file, so cancel the timer again
+        if scan_completed_timer is not None and scan_completed_timer.is_alive():
+            scan_completed_timer.cancel()
 
 
         content_length = int(self.headers['Content-Length']) # <--- Gets the size of data
@@ -124,7 +132,7 @@ class S(BaseHTTPRequestHandler):
                 logging.warning("Tried to scan without current scan")
                 start_new_scan()
 
-            # cant be named num.original.jpg, this messes up gui
+            # cant be named num.original.jpg, this messes up paperless gui
             current_file_name = os.path.join(current_scan["folder_name"], "paper.{}.original.jpg_bak".format(current_scan["current_page"]))
 
             with open(current_file_name,"wb") as imgfile:
@@ -141,6 +149,8 @@ class S(BaseHTTPRequestHandler):
                     self.end_headers()
                     return
 
+            # validate that we can process this file format
+            # TODO: this slows down upload process, maybe remove and rely on file extension alone?
             try:
                 img = Image.open(current_file_name)
                 orig_info = img.info  # extract metadata
@@ -151,6 +161,7 @@ class S(BaseHTTPRequestHandler):
                 self.end_headers()
                 return
             
+            # ready current scan inbox for next page
             current_scan["current_page"] += 1
 
 
@@ -164,15 +175,16 @@ def run_server(server_class=HTTPServer, handler_class=S, port=8000):
     server_address = ('', port)
     handler_class.rbufsize = 0
     httpd = server_class(server_address, handler_class)
-    logging.info('Starting httpd...')
+    logging.info('Starting webdav server ...')
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         worker_queue.put("QUIT")
     httpd.server_close()
-    logging.info('Stopping httpd...')
+    logging.info('Stopping webdav server ...')
 
 
+# worker that processes the uploaded original files in a seperate thread
 def worker():
     global worker_queue, labels
     logging.info("Starting Worker")
@@ -318,6 +330,8 @@ def worker():
             pass
 
 
+
+        # everything is good, now archive and encrypt the content to securely move it to the share folder.
         try:
             
             basefolder_name = os.path.basename(os.path.normpath(work_item["folder_name"]))
@@ -332,17 +346,17 @@ def worker():
                 raise Exception
             
             # clean files if encryption was successfull
+            # leave the empty folder so that name collisions can be detected
             for name in os.listdir(work_item["folder_name"]):
                 if name != "scandate":
                     os.remove(os.path.join(work_item["folder_name"], name))
 
-            # leave note about sucesss
+            # leave note about export
             didexport_file_path = os.path.join(work_item["folder_name"], "did_export_on")
             with open(didexport_file_path, "w") as didexport_file:
                 didexport_file.write(datetime.today().strftime('%Y%m%d_%H%M_%S'))
 
 
-            
             trigger_event("scancomplete",  {
                 "path" : encrypted_output_path,
                 "pages" : int(work_item["current_page"]) - 1,
@@ -380,14 +394,17 @@ def run_worker_loop():
 
 
 worker_queue = Queue()
+
+# holds data about scan in progress for multi page documents
 current_scan = None
+# to detect timeout after last page of document was scanned
 scan_completed_timer = None
 
 
 def start_new_scan():
     global current_scan
     if current_scan is not None:
-        logging.error("Tried to Start Scan when there was already scan active")
+        logging.warning("Tried to Start Scan when there was already scan active")
         finish_scan() # try to finish the broken scan
 
     # create new scan state
@@ -460,7 +477,7 @@ def find_promising_dates(file_name):
 
     root = ET.parse(file_name)
 
-    # find the bbox of the first page (dinA4)
+    # find the bbox of the first page (dinA4) to compute height
     page_title = \
         root.findall('./{http://www.w3.org/1999/xhtml}body/{http://www.w3.org/1999/xhtml}div[@class="ocr_page"]')[0].get(
             "title")
@@ -500,7 +517,7 @@ def find_promising_dates(file_name):
     for line in lines:
         bbox = get_bbox(line.get("title"))
 
-        # clean up word spacings
+        # clean up word spacings and merge lines
         words = [str(s).replace("\n", "") for s in line.itertext()]
         words = [s.strip() for s in words if len(s.strip()) > 0]
         merged_line = " ".join(words)
@@ -521,7 +538,8 @@ gpg_output_folder = "/share/bruderpy"
 output_folder = "/data/scans"
 
 gpg_keyids = config["keyIds"]
-gpg_keyregex = r"^[a-zA-Z0-9]{8,16}$"
+# Either gpg short key id and long key id
+gpg_keyregex = r"^([a-zA-Z0-9]{8}|[a-zA-Z0-9]{16})$"
 for key in gpg_keyids:
     if re.match(gpg_keyregex, key) == None:
         logging.error("KeyID '{}' is not a valid format".format(key))
@@ -541,11 +559,12 @@ if echo.returncode != 0 or gpg.returncode != 0:
     logging.error("Could not encrypt test message")
     raise Exception
 
+
 if not os.path.exists(output_folder):
     os.mkdir(output_folder)
-
 if not os.path.exists(gpg_output_folder):
     os.mkdir(gpg_output_folder)
+
 
 run_worker_loop()
 run_server(port = 8080)
