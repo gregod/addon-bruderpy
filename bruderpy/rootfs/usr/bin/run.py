@@ -525,10 +525,6 @@ gpg_keyids = config["keyIds"]
 default_gpg_params = ["--homedir","/data/.gnupg","--batch"]
 
 import_keys = subprocess.run(["gpg",*default_gpg_params,"--keyserver","hkps://keys.openpgp.org","--recv-keys", *gpg_keyids])
-if import_keys.returncode != 0:
-    logging.error("Could not retrieve gpg keys from keyserver")
-    raise Exception
-
 # test encrypt to make sure right keys were imported
 echo = subprocess.Popen(["echo","test"],stdout=subprocess.PIPE)
 gpg = subprocess.Popen(["gpg",*default_gpg_params,"--encrypt", *sum([["-r",r] for r in gpg_keyids],[]) ,"--trust-model","always"],stdin=echo.stdout, stdout=subprocess.DEVNULL)
