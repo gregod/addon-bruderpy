@@ -6,7 +6,7 @@ Maintenance State / Software Quality: Experimental Software
 
 ## Features
 
-* Fully automatic document archiving directly from printer
+* Fully automatic document archiving directly from scanner
 * Deskewing, thumbnailing and OCR
 * Archiving of original raw images
 * Detects document date from the letterhead
