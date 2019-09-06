@@ -521,6 +521,12 @@ gpg_output_folder = "/share/bruderpy"
 output_folder = "/data/scans"
 
 gpg_keyids = config["keyIds"]
+gpg_keyregex = r"^[a-zA-Z0-9]{8,16}$"
+for key in gpg_keyids:
+    if re.match(gpg_keyregex, key) == None:
+        logging.error("KeyID '{}' is not a valid format".format(key))
+        raise Exception
+
 
 default_gpg_params = ["--homedir","/data/.gnupg","--batch"]
 
