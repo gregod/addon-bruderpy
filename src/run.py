@@ -15,6 +15,7 @@ import xml.etree.ElementTree as ET
 import dateparser
 import json
 import subprocess
+import uuid 
 from requests import post
 
 from thumbnailer import cropped_thumbnail
@@ -154,6 +155,7 @@ class S(BaseHTTPRequestHandler):
             try:
                 img = Image.open(current_file_name)
                 orig_info = img.info  # extract metadata
+                img.close()
                 logging.info("Got file", )
             except:
                 logging.error("Image submitted could not be read")
@@ -203,9 +205,11 @@ def worker():
             original_input_jpg = os.path.join(work_item["folder_name"], "paper.{}.original.jpg_bak".format(i))
             input_jpg = os.path.join(work_item["folder_name"], "paper.{}.jpg".format(i))
 
-            img = Image.open(original_input_jpg)
-            orig_info = img.info  # extract metadata
-            img = numpy.array(img)
+            orig_image = Image.open(original_input_jpg)
+            orig_info = orig_image.info  # extract metadata
+            img = numpy.array(orig_image)
+            orig_image.close()
+
             text_page = True
             try:
                 # find text orientation
@@ -254,9 +258,12 @@ def worker():
             try:
                 thumbnail = cropped_thumbnail(img.copy(), (150, 212))
                 thumbnail.save(os.path.join(work_item["folder_name"], "paper.{}.thumb.jpg".format(i)))
+                thumbnail.close()
             except:
                 logging.error("Could not generate thumbnail")
             logging.info("Finished file...")
+
+            img.close()
 
 
         # try to guess date
@@ -334,10 +341,12 @@ def worker():
         # everything is good, now archive and encrypt the content to securely move it to the share folder.
         try:
             
+            parentfolder_name = os.path.join(work_item["folder_name"], os.pardir)
             basefolder_name = os.path.basename(os.path.normpath(work_item["folder_name"]))
-            encrypted_output_path = os.path.join(gpg_output_folder, "{}.tar.gpg".format(basefolder_name))
+            encrypted_output_path = os.path.join(gpg_output_folder, "{}.tar.gpg".format(work_item["id"]))
 
-            tar = subprocess.Popen(["tar","-cf","-","-C",work_item["folder_name"],"."],stdout=subprocess.PIPE)
+            
+            tar = subprocess.Popen(["tar","-cf","-","-C",parentfolder_name,basefolder_name],stdout=subprocess.PIPE)
             gpg = subprocess.Popen(["gpg",*default_gpg_params,"--encrypt", *sum([["-r",r] for r in gpg_keyids],[]) ,"--trust-model","always","-o",encrypted_output_path],stdin=tar.stdout)
             gpg.communicate()
             tar.communicate()
@@ -348,7 +357,7 @@ def worker():
             # clean files if encryption was successfull
             # leave the empty folder so that name collisions can be detected
             for name in os.listdir(work_item["folder_name"]):
-                if name != "scandate":
+                if name != "scandate" and name != "id":
                     os.remove(os.path.join(work_item["folder_name"], name))
 
             # leave note about export
@@ -417,12 +426,22 @@ def start_new_scan():
         valid_path = "{}_{}".format(base_folder, folder_counter)
         folder_counter += 1
 
+
+    id = str(uuid.uuid4())
+ 
+    # and create matching folder
+    os.mkdir(valid_path)
+
+    # create id within this folder
+    with open(os.path.join(valid_path,"id"), "w") as id_file:
+        id_file.write(id)
+
     current_scan = {
+        "id" : id,
         "folder_name" : valid_path,
         "current_page" : 1
     }
-    # and create matching folder
-    os.mkdir(current_scan["folder_name"])
+    
 
 
 def finish_scan():
@@ -467,8 +486,7 @@ def deskew(im, max_skew=10):
     angle_deg = numpy.rad2deg(numpy.median(angles))
 
     M = cv2.getRotationMatrix2D((width / 2, height / 2), angle_deg, 1)
-    im = cv2.warpAffine(im, M, (width, height), borderMode=cv2.BORDER_REPLICATE)
-    return im
+    return cv2.warpAffine(im, M, (width, height), borderMode=cv2.BORDER_REPLICATE)
 
 
 def find_promising_dates(file_name):
@@ -564,6 +582,35 @@ if not os.path.exists(output_folder):
     os.mkdir(output_folder)
 if not os.path.exists(gpg_output_folder):
     os.mkdir(gpg_output_folder)
+
+
+# recover unfinished scans in scatch space and add them to queue
+for subfolder in os.listdir(output_folder):
+    if not os.path.exists(os.path.join(output_folder,subfolder,"did_export_on")):
+        # found folder that was not exported yet
+        folder_name = os.path.join(output_folder,subfolder)
+        num_pages = len([ jpg for jpg in os.listdir(folder_name) if jpg.endswith("original.jpg_bak")])
+        
+        id = 0
+
+        try:
+            with open(os.path.join(output_folder,subfolder,"id"),"r") as id_file:
+                id = id_file.read()
+            if id is None or len(id) < 5:
+                raise Exception
+        except:
+            id = str(uuid.uuid4())
+                # create id within this folder
+            with open(os.path.join(folder_name,"id"), "w") as id_file:
+                id_file.write(id)
+
+        logging.info("Recovering scan {} = {} with {} pages".format(id,folder_name,num_pages))
+        worker_queue.put( {
+            "id" : id,
+            "folder_name" : folder_name,
+            "current_page" : num_pages + 1
+        })
+
 
 
 run_worker_loop()

@@ -3,3 +3,4 @@ dateparser==0.7.1
 Pillow==6.1.0
 pytesseract==0.3.0
 requests==2.22.0
+uuid==1.30
