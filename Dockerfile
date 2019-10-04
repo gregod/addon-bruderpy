@@ -8,7 +8,7 @@ ENV TESSDATA_DE https://raw.githubusercontent.com/tesseract-ocr/tessdata/master/
 ENV OPENCV https://github.com/opencv/opencv/archive/4.1.1.tar.gz
 ENV OPENCV_VER 4.1.1
 
-ENV PYTHON_VERSION 3.7.3
+ENV PYTHON_VERSION 3.7.4
 ENV NUMPY_VERSION 1.17
 ENV TESSERACT_VERSION 4.0.0
 
