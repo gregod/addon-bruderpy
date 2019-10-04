@@ -136,27 +136,36 @@ class S(BaseHTTPRequestHandler):
             # cant be named num.original.jpg, this messes up paperless gui
             current_file_name = os.path.join(current_scan["folder_name"], "paper.{}.original.jpg_bak".format(current_scan["current_page"]))
 
-            with open(current_file_name,"wb") as imgfile:
+            with open(current_file_name, "wb") as imgfile:
                 read = 0
                 while read < content_length:
-                    buffer = self.rfile.read(1024)
+                    buffer = self.rfile.read(8192)
                     if not buffer:
                         break
                     imgfile.write(buffer)
                     read += len(buffer)
-                if read > content_length:
-                    logging.error("Read more data than content length")
+
+                if read != content_length:
+                    logging.error("Read other data than content length")
                     self.send_response(500)
                     self.end_headers()
                     return
 
             # validate that we can process this file format
+            # and that file was written correctly to disk
             # TODO: this slows down upload process, maybe remove and rely on file extension alone?
             try:
-                img = Image.open(current_file_name)
-                orig_info = img.info  # extract metadata
-                img.close()
-                logging.info("Got file", )
+                with Image.open(current_file_name) as img:
+                    width, height = img.size
+
+                logging.info("Got file {}x{}".format(width, height))
+
+                # during testing there were issues with some pages
+                # being transmitted with a zero resolution
+                # reject those directly after post so that
+                # scanner throws error
+                if width == 0 or height == 0:
+                    raise Exception("Image size is 0 in one dimension")
             except:
                 logging.error("Image submitted could not be read")
                 self.send_response(500)
