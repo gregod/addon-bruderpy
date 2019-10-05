@@ -235,7 +235,7 @@ def worker():
             except:
                 text_page = False
                 logging.warning("Error finding tesseract orientation. Is this a blank page?")
-            
+
             if text_page:
                 try:
                   # then deskew
