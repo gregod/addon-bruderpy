@@ -595,30 +595,31 @@ if not os.path.exists(gpg_output_folder):
 
 # recover unfinished scans in scatch space and add them to queue
 for subfolder in os.listdir(output_folder):
-    if not os.path.exists(os.path.join(output_folder,subfolder,"did_export_on")):
+    if os.path.exists(os.path.join(output_folder,subfolder,"id")) \
+            and not os.path.exists(os.path.join(output_folder,subfolder,"did_export_on")):
         # found folder that was not exported yet
         folder_name = os.path.join(output_folder,subfolder)
         num_pages = len([ jpg for jpg in os.listdir(folder_name) if jpg.endswith("original.jpg_bak")])
-        
-        id = 0
+        if num_pages > 0:
+            id = 0
 
-        try:
-            with open(os.path.join(output_folder,subfolder,"id"),"r") as id_file:
-                id = id_file.read()
-            if id is None or len(id) < 5:
-                raise Exception
-        except:
-            id = str(uuid.uuid4())
-                # create id within this folder
-            with open(os.path.join(folder_name,"id"), "w") as id_file:
-                id_file.write(id)
+            try:
+                with open(os.path.join(output_folder,subfolder,"id"),"r") as id_file:
+                    id = id_file.read()
+                if id is None or len(id) < 5:
+                    raise Exception
+            except:
+                id = str(uuid.uuid4())
+                    # create new id within this folder
+                with open(os.path.join(folder_name,"id"), "w") as id_file:
+                    id_file.write(id)
 
-        logging.info("Recovering scan {} = {} with {} pages".format(id,folder_name,num_pages))
-        worker_queue.put( {
-            "id" : id,
-            "folder_name" : folder_name,
-            "current_page" : num_pages + 1
-        })
+            logging.info("Recovering scan {} = {} with {} pages".format(id,folder_name,num_pages))
+            worker_queue.put( {
+                "id" : id,
+                "folder_name" : folder_name,
+                "current_page" : num_pages + 1
+            })
 
 
 
