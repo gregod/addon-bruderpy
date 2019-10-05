@@ -156,7 +156,7 @@ class S(BaseHTTPRequestHandler):
             # TODO: this slows down upload process, maybe remove and rely on file extension alone?
             try:
                 with Image.open(current_file_name) as img:
-                    width, height = img.size
+                        width, height = img.size
 
                 logging.info("Got file {}x{}".format(width, height))
 
