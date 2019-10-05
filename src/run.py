@@ -236,11 +236,12 @@ def worker():
                 text_page = False
                 logging.warning("Error finding tesseract orientation. Is this a blank page?")
             
-            try:
-              # then deskew
-              img = deskew(img)
-            except:
-              logging.warning("Error deskewing image, continuing with original")
+            if text_page:
+                try:
+                  # then deskew
+                  img = deskew(img)
+                except:
+                  logging.warning("Error deskewing image, continuing with original")
 
             # restore original image info
             img = Image.fromarray(img)
