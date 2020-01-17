@@ -1,6 +1,6 @@
 numpy # numpy is installed by system package
 dateparser==0.7.2
-Pillow==6.2.0
-pytesseract==0.3.0
+Pillow==7.0.0
+pytesseract==0.3.1
 requests==2.22.0
 uuid==1.30
