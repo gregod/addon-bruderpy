@@ -1,28 +1,21 @@
-ARG BUILD_FROM=homeassistant/base:3.10
+ARG BUILD_FROM=homeassistant/base:3.11
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
 
+ENV OPENCV https://github.com/opencv/opencv/archive/4.2.0.tar.gz
+ENV OPENCV_VER 4.2.0
 
-ENV TESSDATA_EN https://raw.githubusercontent.com/tesseract-ocr/tessdata/master/eng.traineddata
-ENV TESSDATA_DE https://raw.githubusercontent.com/tesseract-ocr/tessdata/master/deu.traineddata
-ENV OPENCV https://github.com/opencv/opencv/archive/4.1.1.tar.gz
-ENV OPENCV_VER 4.1.1
-
-ENV PYTHON_VERSION 3.7.4
-ENV NUMPY_VERSION 1.17
-ENV TESSERACT_VERSION 4.0.0
-
-# install tagged edge repo
-RUN echo "@edge http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
+ENV PYTHON_VERSION 3.8.1-r0
+ENV NUMPY_VERSION 1.17.4
+ENV TESSERACT_VERSION 4.1.0-r0
 
 # first numpy and tesseract runtimes + gnupg
 RUN apk add -U --no-cache \
     python3~=$PYTHON_VERSION \
-    py3-numpy@edge~=$NUMPY_VERSION \
+    py3-numpy~=$NUMPY_VERSION \
     tesseract-ocr~=$TESSERACT_VERSION \
+    tesseract-ocr-data-deu~=$TESSERACT_VERSION \
     zlib jpeg libjpeg freetype openjpeg gnupg\
-    && curl $TESSDATA_EN -o /usr/share/tessdata/eng.traineddata \
-    && curl $TESSDATA_DE -o /usr/share/tessdata/deu.traineddata \
     && ln -s /usr/include/locale.h /usr/include/xlocale.h
 
 # then build opencv
@@ -31,7 +24,7 @@ RUN apk add -U --virtual=build-dependencies  \
     musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
     lcms2-dev openjpeg-dev openblas-dev  make cmake gcc ninja \ 
     clang-dev clang \
-    && apk add py3-numpy-dev@edge~=$NUMPY_VERSION python3-dev~=$PYTHON_VERSION openblas \
+    && apk add py3-numpy-dev~=$NUMPY_VERSION python3-dev~=$PYTHON_VERSION openblas \
     && cd /opt \
     && curl -L $OPENCV | tar zx \
     && cd opencv-$OPENCV_VER \
