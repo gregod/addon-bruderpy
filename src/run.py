@@ -323,8 +323,14 @@ def worker():
                 # actually rename folder
                 os.rename(work_item["folder_name"], valid_path)
                 work_item["folder_name"] = valid_path
+
+                # add label
+                file_labels.append("_AUTO_DATED")
+            else:
+                file_labels.append("_UN_DATED")
         except:
             logging.error("Error in guessing date, continuing")
+            file_labels.append("_UN_DATED")
             pass
 
         try:
