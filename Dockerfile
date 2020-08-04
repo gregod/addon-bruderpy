@@ -1,13 +1,14 @@
-ARG BUILD_FROM=homeassistant/base:3.11
+ARG BUILD_FROM=homeassistant/base:3.12 
+# ^^^^ just the fallback, see build.json for all
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
 
-ENV OPENCV https://github.com/opencv/opencv/archive/4.2.0.tar.gz
-ENV OPENCV_VER 4.2.0
+ENV OPENCV https://github.com/opencv/opencv/archive/4.4.0.tar.gz
+ENV OPENCV_VER 4.4.0
 
-ENV PYTHON_VERSION 3.8.1-r0
-ENV NUMPY_VERSION 1.17.4
-ENV TESSERACT_VERSION 4.1.0-r0
+ENV PYTHON_VERSION 3.8.5-r0
+ENV NUMPY_VERSION 1.18.4-r0
+ENV TESSERACT_VERSION 4.1.1-r3
 
 # first numpy and tesseract runtimes + gnupg
 RUN apk add -U --no-cache \
@@ -15,7 +16,7 @@ RUN apk add -U --no-cache \
     py3-numpy~=$NUMPY_VERSION \
     tesseract-ocr~=$TESSERACT_VERSION \
     tesseract-ocr-data-deu~=$TESSERACT_VERSION \
-    zlib jpeg libjpeg freetype openjpeg gnupg\
+    zlib py3-pip jpeg libjpeg freetype openjpeg openjpeg-tools gnupg\
     && ln -s /usr/include/locale.h /usr/include/xlocale.h
 
 # then build opencv
@@ -35,6 +36,7 @@ RUN apk add -U --virtual=build-dependencies  \
             -D CMAKE_BUILD_TYPE=RELEASE \
             -D BUILD_DOCS=OFF \
             -D BUILD_EXAMPLES=OFF \
+	        -D INSTALL_PYTHON_EXAMPLES=OFF \
             -D BUILD_PERF_TESTS=OFF \
             -D BUILD_TESTS=OFF \
             -D BUILD_PROTOBUF=OFF \
