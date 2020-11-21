@@ -337,7 +337,7 @@ def worker():
             # store scan date in file
             scandate_file_path = os.path.join(work_item["folder_name"], "scandate")
             with open(scandate_file_path, "w") as scandate_file:
-                scandate_file.write(datetime.today().strftime('%Y%m%d_%H%M_%S'))
+                scandate_file.write(datetime.today().strftime('%Y%m%d_%H%M_%S') + "\n")
 
             # store document labels in file
             if len(file_labels) > 0:
@@ -345,9 +345,9 @@ def worker():
                 with open(labels_file_path, "w") as label_file:
                     for label in file_labels:
                         if label in labels:
-                            label_file.write("{},{}".format(label, labels[label]))
+                            label_file.write("{},{}\n".format(label, labels[label]))
                         else:
-                            label_file.write("{},{}".format(label, "rgb(0,0,0)"))
+                            label_file.write("{},{}\n".format(label, "rgb(0,0,0)"))
         except:
             logging.error("Error setting labels, continuing")
             pass
@@ -379,7 +379,7 @@ def worker():
             # leave note about export
             didexport_file_path = os.path.join(work_item["folder_name"], "did_export_on")
             with open(didexport_file_path, "w") as didexport_file:
-                didexport_file.write(datetime.today().strftime('%Y%m%d_%H%M_%S'))
+                didexport_file.write(datetime.today().strftime('%Y%m%d_%H%M_%S') + "\n")
 
 
             trigger_event("scancomplete",  {
@@ -450,7 +450,7 @@ def start_new_scan():
 
     # create id within this folder
     with open(os.path.join(valid_path,"id"), "w") as id_file:
-        id_file.write(id)
+        id_file.write(id + "\n")
 
     current_scan = {
         "id" : id,
@@ -619,7 +619,7 @@ for subfolder in os.listdir(output_folder):
                 id = str(uuid.uuid4())
                     # create new id within this folder
                 with open(os.path.join(folder_name,"id"), "w") as id_file:
-                    id_file.write(id)
+                    id_file.write(id + "\n")
 
             logging.info("Recovering scan {} = {} with {} pages".format(id,folder_name,num_pages))
             worker_queue.put( {
