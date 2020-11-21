@@ -3,8 +3,8 @@ ARG BUILD_FROM=homeassistant/base:3.12
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
 
-ENV OPENCV https://github.com/opencv/opencv/archive/4.4.0.tar.gz
-ENV OPENCV_VER 4.4.0
+ENV OPENCV_VER 4.5.0
+ENV OPENCV https://github.com/opencv/opencv/archive/${OPENCV_VER}.tar.gz
 
 ENV PYTHON_VERSION 3.8.5-r0
 ENV NUMPY_VERSION 1.18.4-r0
