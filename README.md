@@ -14,6 +14,9 @@ Maintenance State / Software Quality: Experimental Software
 * Triggers custom HomeAssistant Events
 * Open file format (just files in a folder) compatible with [OpenPaper](https://openpaper.work/en-us/)
 
+## Installation
+
+This addon is available through the repository https://github.com/gregod/hassio-addon-repo. See the [Homeassistant Documentation](https://www.home-assistant.io/hassio/installing_third_party_addons/) for installation instructions.
 
 ## Configuration
 
