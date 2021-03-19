@@ -1,14 +1,15 @@
-ARG BUILD_FROM=homeassistant/base:3.12 
+ARG BUILD_FROM=homeassistant/amd64-base:3.13
 # ^^^^ just the fallback, see build.json for all
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
 
-ENV OPENCV_VER 4.5.0
+ENV OPENCV_VER 4.5.1
 ENV OPENCV https://github.com/opencv/opencv/archive/${OPENCV_VER}.tar.gz
 
-ENV PYTHON_VERSION 3.8.5-r0
-ENV NUMPY_VERSION 1.18.4-r0
-ENV TESSERACT_VERSION 4.1.1-r3
+
+ENV PYTHON_VERSION 3.8.8-r0
+ENV NUMPY_VERSION 1.19.5-r0
+ENV TESSERACT_VERSION 4.1.1-r5
 
 # first numpy and tesseract runtimes + gnupg
 RUN apk add -U --no-cache \
