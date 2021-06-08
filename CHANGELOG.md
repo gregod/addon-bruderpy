@@ -1,5 +1,7 @@
 # Changelog
 
+## 1.9
+- Dependency updates (security issue in Pillow dependency, again)
 ## 1.8
 - Dependency updates (security issue in Pillow dependency)
 
