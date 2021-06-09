@@ -6,17 +6,12 @@ FROM ${BUILD_FROM}
 ENV OPENCV_VER 4.5.1
 ENV OPENCV https://github.com/opencv/opencv/archive/${OPENCV_VER}.tar.gz
 
-
-ENV PYTHON_VERSION 3.8.8-r0
-ENV NUMPY_VERSION 1.19.5-r0
-ENV TESSERACT_VERSION 4.1.1-r5
-
 # first numpy and tesseract runtimes + gnupg
 RUN apk add -U --no-cache \
-    python3~=$PYTHON_VERSION \
-    py3-numpy~=$NUMPY_VERSION \
-    tesseract-ocr~=$TESSERACT_VERSION \
-    tesseract-ocr-data-deu~=$TESSERACT_VERSION \
+    python3 \
+    py3-numpy \
+    tesseract-ocr \
+    tesseract-ocr-data-deu \
     zlib py3-pip jpeg libjpeg freetype openjpeg openjpeg-tools gnupg\
     && ln -s /usr/include/locale.h /usr/include/xlocale.h
 
@@ -26,7 +21,7 @@ RUN apk add -U --virtual=build-dependencies  \
     musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
     lcms2-dev openjpeg-dev openblas-dev  make cmake gcc ninja \ 
     clang-dev clang \
-    && apk add py3-numpy-dev~=$NUMPY_VERSION python3-dev~=$PYTHON_VERSION openblas \
+    && apk add py3-numpy-dev python3-dev openblas \
     && cd /opt \
     && curl -L $OPENCV | tar zx \
     && cd opencv-$OPENCV_VER \
@@ -76,7 +71,7 @@ RUN apk add -U --virtual=build-dependencies \
     linux-headers musl libxml2-dev libxslt-dev libffi-dev \
     musl-dev libgcc openssl-dev jpeg-dev zlib-dev freetype-dev build-base \
     lcms2-dev openjpeg-dev make cmake gcc ninja \
-    && apk add python3-dev~=$PYTHON_VERSION \
+    && apk add python3-dev \
     && pip3 install --no-cache-dir -r /tmp/requirements.txt \
     && apk del python3-dev build-dependencies \
     && rm -rf /var/cache/apk/*
