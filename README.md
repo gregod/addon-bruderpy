@@ -1,3 +1,6 @@
+# DEPRECATED
+Suggested alternative: [Paperless]( https://paperless-ng.readthedocs.io/en/latest/index.html)
+
 # BruderPy Addon
 
 This addon receives images from network enabled document scanners via webdav, runs OCR on them and archives them GPG encrypted to the /share folder. 
